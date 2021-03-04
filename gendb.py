@@ -13,13 +13,16 @@ class DatabaseHandler(object):
     def close_db(self):
         self.db = None
 
+    def open_db(self, path):
+        self.db = sql.connect(path)
+
     # Setup new database for setting
-    def setup_database(self, title='', author='', genre='', overview=''):
-        self.db = sql.connect(title + '.db')
+    def setup_database(self, name='', author='', genre='', overview=''):
+        self.db = sql.connect(name + '.db')
         c = self.db.cursor()
         c.execute(
             'CREATE TABLE IF NOT EXISTS "setting" ( \
-                "title" TEXT NOT NULL UNIQUE, \
+                "name" TEXT NOT NULL UNIQUE, \
                 "author" TEXT, \
                 "genre" TEXT, \
                 "overview" TEXT \
@@ -28,7 +31,7 @@ class DatabaseHandler(object):
         c.execute(
             'CREATE TABLE IF NOT EXISTS "tropes" ( \
                 "id" INTEGER NOT NULL UNIQUE, \
-                "trope" TEXT NOT NULL, \
+                "name" TEXT NOT NULL, \
                 "description" TEXT, \
                 PRIMARY KEY("id" AUTOINCREMENT) \
             )'
@@ -36,7 +39,7 @@ class DatabaseHandler(object):
         c.execute(
             'CREATE TABLE IF NOT EXISTS "skills" ( \
                 "id" INTEGER NOT NULL UNIQUE, \
-                "skill" TEXT NOT NULL, \
+                "name" TEXT NOT NULL, \
                 "category" TEXT, \
                 "characteristic" TEXT, \
                 "description" TEXT, \
@@ -48,7 +51,7 @@ class DatabaseHandler(object):
         c.execute(
             'CREATE TABLE IF NOT EXISTS "talents" ( \
                 "id" INTEGER NOT NULL UNIQUE, \
-                "talent" TEXT NOT NULL, \
+                "name" TEXT NOT NULL, \
                 "tier" TEXT, \
                 "activation" TEXT, \
                 "ranked" TEXT, \
@@ -59,7 +62,7 @@ class DatabaseHandler(object):
         c.execute(
             'CREATE TABLE IF NOT EXISTS "qualities" ( \
                 "id" INTEGER NOT NULL UNIQUE, \
-                "quality" TEXT NOT NULL, \
+                "name" TEXT NOT NULL, \
                 "description" TEXT, \
                 PRIMARY KEY("id" AUTOINCREMENT) \
             )'
@@ -67,7 +70,7 @@ class DatabaseHandler(object):
         c.execute(
             'CREATE TABLE IF NOT EXISTS "weapons" ( \
                 "id" INTEGER NOT NULL UNIQUE, \
-                "weapon" TEXT NOT NULL, \
+                "name" TEXT NOT NULL, \
                 "category" TEXT, \
                 "skill" TEXT, \
                 "damage" TEXT, \
@@ -84,7 +87,7 @@ class DatabaseHandler(object):
         c.execute(
             'CREATE TABLE IF NOT EXISTS "attachments" ( \
                 "id" INTEGER NOT NULL UNIQUE, \
-                "attachment" TEXT NOT NULL, \
+                "name" TEXT NOT NULL, \
                 "armor" BOOLEAN, \
                 "hardpoints" TEXT, \
                 "price" TEXT, \
@@ -96,7 +99,7 @@ class DatabaseHandler(object):
         c.execute(
             'CREATE TABLE IF NOT EXISTS "armor" ( \
                 "id" INTEGER NOT NULL UNIQUE, \
-                "armor" TEXT NOT NULL, \
+                "name" TEXT NOT NULL, \
                 "category" TEXT, \
                 "defense" TEXT, \
                 "soak" TEXT, \
@@ -110,7 +113,7 @@ class DatabaseHandler(object):
         c.execute(
             'CREATE TABLE IF NOT EXISTS "gear" ( \
                 "id" INTEGER NOT NULL UNIQUE, \
-                "gear" TEXT NOT NULL, \
+                "name" TEXT NOT NULL, \
                 "category" TEXT, \
                 "encumbrance" TEXT, \
                 "price" TEXT, \
@@ -120,16 +123,129 @@ class DatabaseHandler(object):
             )'
         )
         c.execute(
-            'INSERT INTO setting(title, author, genre, overview) \
-            VALUES(?,?,?,?)', (title, author, genre, overview)
+            'INSERT INTO setting(name, author, genre, overview) \
+            VALUES(?,?,?,?)', (name, author, genre, overview)
         )
         self.db.commit()
         c.close()
+
+    def add_tope(self, data):
+        c = self.db.cursor()
+        c.execute(
+            'INSERT INTO tropes(name, description) \
+            VALUES(?,?)', (data['name'], data['description'])
+        )
+        self.db.commit()
+        c.close()
+
+    def update_trope(self, data):
+        pass
+
+    def add_attachment(self, data):
+        c = self.db.cursor()
+        c.execute(
+            'INSERT INTO attachments(name, armor, hardpoints, \
+            price, rarity, description) VALUES(?,?,?,?,?,?)', \
+            (data['name'], data['armor'], data['hardpoints'], data['price'],
+            data['rarity'], data['description'])
+        )
+        self.db.commit()
+        c.close()
+
+    def update_attachment(self, data):
+        pass
+
+    def add_quality(self, data):
+        c = self.db.cursor()
+        c.execute(
+            'INSERT INTO qualities(name, description) \
+            VALUES(?,?)', (data['name'], data['description'])
+        )
+        self.db.commit()
+        c.close()
+
+    def update_quality(self, data):
+        pass
+
+    def add_skill(self, data):
+        c = self.db.cursor()
+        c.execute(
+            'INSERT INTO skills(name, category, characteristic, description, \
+            should, shouldnt) VALUES(?,?,?,?,?,?)', 
+            (data['name'], data['category'], data['characteristic'], 
+            data['description'], data['should'], data['shouldnt'])
+        )
+        self.db.commit()
+        c.close()
+
+    def update_skill(self, data):
+        pass
+
+    def add_trope(self, data):
+        c = self.db.cursor()
+        c.execute(
+            'INSERT INTO tropes(name, description) VALUES(?,?)',
+            (data['name'], data['description'])
+        )
+        self.db.commit()
+        c.close()
+
+    def update_trope(self, data):
+        pass
+
+    def add_weapon(self, data):
+        c = self.db.cursor()
+        c.execute(
+            'INSERT INTO weapons(name, category, skill, damage, critical, \
+            range, encumbrance, price, rarity, special, description) \
+            VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+            (data['name'], data['category'], data['skill'], data['damage'], 
+            data['critical'], data['range'], data['encumbrance'], data['price'], 
+            data['rarity'], data['special'], data['description'])
+        )
+        self.db.commit()
+        c.close()
+
+    def update_weapon(self, data):
+        pass
+
+    def add_armor(self, data):
+        c = self.db.cursor()
+        c.execute(
+            'INSERT INTO armor(name, category,  defense, soak, encumbrance, \
+            price, rarity, description) VALUES(?,?,?,?,?,?,?,?)',
+            (data['name'], data['category'], data['defense'], data['soak'], 
+            data['encumbrance'], data['price'], data['rarity'], 
+            data['description'])
+        )
+        self.db.commit()
+        c.close()
+
+    def update_armor(self, data):
+        pass
+
+    def add_gear(self, data):
+        c = self.db.cursor()
+        c.execute(
+            'INSERT INTO gear(name, category, encumbrance, price, rarity, \
+            description) VALUES(?,?,?,?,?,?)', (data['name'], data['category'], 
+            data['encumbrance'], data['price'], data['rarity'], 
+            data['description'])
+        )
+        self.db.commit()
+        c.close()
+
+    def update_gear(self, data):
+        pass
+
+    def remove_entry(self, table, id):
+        pass
 
 ####################################
 # Custom Widgets
 ####################################
 
+# Titled MultiLineEdit
 class InputBox(nps.BoxTitle):
     _contained_widget = nps.MultiLineEdit
 
@@ -147,7 +263,7 @@ class MenuSelect(nps.MultiLineAction):
         elif act_on_this == 'EXIT':
             self.parent.parentApp.switchForm(None)
         elif act_on_this == 'CLOSE':
-            self.parent.parentApp.db_handler.close_db()
+            self.parent.parentApp.dbhandler.close_db()
             self.parent.parentApp.switchForm('MAIN')
 
 ####################################
@@ -169,7 +285,7 @@ class NewSetting(nps.FormBaseNewWithMenus):
 
     def create_setting(self):
         self.parentApp.dbhandler.setup_database(
-            title = self.setting.value,
+            name = self.setting.value,
             author = self.author.value,
             genre = self.genre.value,
             overview = self.overview.value
@@ -177,6 +293,10 @@ class NewSetting(nps.FormBaseNewWithMenus):
         self.parentApp.switchForm('SETTINGMENU')
 
     def cancel(self):
+        self.setting.value = ''
+        self.author.value = ''
+        self.genre.value = ''
+        self.overview.value = ''
         self.parentApp.switchFormPrevious()
 
 ####################################
@@ -188,13 +308,33 @@ class CreateTalent(nps.FormBaseNewWithMenus):
         self.name = 'GENESYS DATABASE - CREATE - TALENT'
 
         self.menu = self.new_menu()
-        self.menu.addItem(text='SAVE', shortcut='^S')
+        self.menu.addItem(text='CREATE', onSelect=self.create_talent)
+        self.menu.addItem(text='CANCEL', onSelect=self.cancel)
     
         self.tal = self.add(nps.TitleText, name='TALENT')
         self.tier = self.add(nps.TitleText, name='TIER')
         self.act = self.add(nps.TitleText, name='ACTIVATION')
         self.rank = self.add(nps.Checkbox, name='RANKED')
         self.desc = self.add(InputBox, name='DESCRIPTION')
+    
+    def create_talent(self):
+    	data = {
+    		'name': self.tal.value,
+    		'tier': self.tier.value,
+    		'activation': self.tier.value,
+    		'ranked': self.rank.value,
+    		'description': self.desc.value
+    	}
+    	self.parentApp.dbhandler.add_talent(data)
+    	self.cancel()
+    
+    def cancel(self):
+        self.tal.value = ''
+        self.tier.value = ''
+        self.act.value = ''
+        self.rank.value = False
+        self.desc.value = ''
+        self.parentApp.switchFormPrevious()
 
 ####################################
 # Create Skill Form
@@ -204,6 +344,10 @@ class CreateSkill(nps.FormBaseNewWithMenus):
     def create(self):
         self.name = 'GENESYS DATABASE - CREATE - SKILL'
 
+        self.menu = self.new_menu()
+        self.menu.addItem(text='CREATE', onSelect=self.create_skill)
+        self.menu.addItem(text='CANCEL', onSelect=self.cancel)
+
         self.skill = self.add(nps.TitleText, name='SKILL', begin_entry_at=17)
         self.cat = self.add(nps.TitleText, name='CATEGORY', begin_entry_at=17)
         self.char = self.add(nps.TitleText, name='CHARACTERISTIC',
@@ -212,17 +356,39 @@ class CreateSkill(nps.FormBaseNewWithMenus):
         self.dos = self.add(InputBox, name='SHOULD USE IF...', max_height=6)
         self.dont = self.add(InputBox, name='SHOULD NOT USE IF...', 
             max_height=6)
+            
+    def create_skill(self):
+    	data = {
+    		'name': self.skill.value,
+    		'category': self.cat.value,
+    		'characteristic': self.char.value,
+    		'description': self.desc.value,
+    		'should': self.dos.value,
+    		'shouldnt': self.dont.value
+    	}
+    	self.parentApp.dbhandler.add_skill(data)
+    	self.cancel()
+
+    def cancel(self):
+        self.skill.value = ''
+        self.cat.value = ''
+        self.char.value = ''
+        self.desc.value = ''
+        self.dos.value = ''
+        self.dont.value = ''
+        self.parentApp.switchFormPrevious()    
 
 ####################################
 # Create Gear/Item Form
 ####################################
 
 class CreateGear(nps.FormBaseNewWithMenus):
-    def afterEditing(self):
-        self.parentApp.setNextForm(None)
-
     def create(self):
         self.name = 'GENESYS DATABASE - CREATE - GEAR'
+
+        self.menu = self.new_menu()
+        self.menu.addItem(text='CREATE', onSelect=self.create_gear)
+        self.menu.addItem(text='CANCEL', onSelect=self.cancel)
 
         self.type = self.add(nps.TitleText, name='TYPE')
         self.cat = self.add(nps.TitleText, name='CATEGORY')
@@ -230,17 +396,39 @@ class CreateGear(nps.FormBaseNewWithMenus):
         self.price = self.add(nps.TitleText, name='PRICE')
         self.rarity = self.add(nps.TitleText, name='RARITY')
         self.desc = self.add(InputBox, name='DESCRIPTION')
+        
+    def create_gear(self):
+    	data = {
+    		'name': self.type.value,
+    		'category': self.cat.value,
+    		'encumbrance': self.encum.value,
+    		'price': self.price.value,
+    		'rarity': self.rarity.value,
+    		'description': self.desc.value
+    	}
+    	self.parentApp.dbhandler.add_gear(data)
+    	self.cancel()
+
+    def cancel(self):
+        self.type.value = ''
+        self.cat.value = ''
+        self.encum.value = ''
+        self.price.value = ''
+        self.rarity.value = ''
+        self.desc.value = ''
+        self.parentApp.switchFormPrevious()
 
 ####################################
 # Create Armor Form
 ####################################
 
 class CreateArmor(nps.FormBaseNewWithMenus):
-    def afterEditing(self):
-        self.parentApp.setNextForm(None)
-
     def create(self):
         self.name = 'GENESYS DATABASE - CREATE - ARMOR'
+
+        self.menu = self.new_menu()
+        self.menu.addItem(text='CREATE', onSelect=self.create_armor)
+        self.menu.addItem(text='CANCEL', onSelect=self.cancel)
 
         self.type = self.add(nps.TitleText, name='TYPE')
         self.cat = self.add(nps.TitleText, name='CATEGORY')
@@ -250,17 +438,43 @@ class CreateArmor(nps.FormBaseNewWithMenus):
         self.price = self.add(nps.TitleText, name='PRICE')
         self.rarity = self.add(nps.TitleText, name='RARITY')
         self.desc = self.add(InputBox, name='DESCRIPTION')
+        
+    def create_armor(self):
+    	data = {
+    		'name': self.type.value,
+    		'category': self.cat.value,
+    		'defense': self.defen.value,
+    		'soak': self.soak.value,
+    		'encumbrance': self.encum.value,
+    		'price': self.price.value,
+    		'rarity': self.rarity.value,
+    		'description': self.description.value
+    	}
+    	self.parentApp.dbhandler.add_armor(data)
+    	self.cancel()
+
+    def cancel(self):
+        self.type.value = ''
+        self.cat.value = ''
+        self.defen.value = ''
+        self.soak.value = ''
+        self.encum.value = ''
+        self.price.value = ''
+        self.rarity.value = ''
+        self.desc.value = ''
+        self.parentApp.switchFormPrevious()
 
 ####################################
 # Create Weapon Form
 ####################################
 
 class CreateWeapon(nps.FormBaseNewWithMenus):
-    def afterEditing(self):
-        self.parentApp.setNextForm(None)
-
     def create(self):
         self.name = 'GENESYS DATABASE - CREATE - WEAPON'
+
+        self.menu = self.new_menu()
+        self.menu.addItem(text='CREATE', onSelect=self.create_weapon)
+        self.menu.addItem(text='CANCEL', onSelect=self.cancel)
 
         self.type = self.add(nps.TitleText, name='NAME')
         self.cat = self.add(nps.TitleText, name='CATEGORY')
@@ -273,6 +487,37 @@ class CreateWeapon(nps.FormBaseNewWithMenus):
         self.rarity = self.add(nps.TitleText, name='RARITY')
         self.special = self.add(nps.TitleText, name='SPECIAL')
         self.desc = self.add(InputBox, name='DESCRIPTION')
+        
+    def create_weapon(self):
+    	data = {
+    		'name': self.type.value,
+    		'category': self.cat.value,
+    		'skill': self.skill.value,
+    		'damage': self.dam.value,
+    		'critical': self.crit.value,
+    		'range': self.range.value,
+    		'encumbrance': self.encum.value,
+    		'price': self.price.value,
+    		'rarity': self.rarity.value,
+    		'special': self.special.value,
+    		'description': self.desc.value
+    	}
+    	self.parentApp.dbhandler.add_weapon(data)
+    	self.cancel()
+
+    def cancel(self):
+        self.type.value = ''
+        self.cat.value = ''
+        self.skill.value = ''
+        self.dam.value = ''
+        self.crit.value = ''
+        self.range.value = ''
+        self.encum.value = ''
+        self.price.value = ''
+        self.rarity.value = ''
+        self.special.value = ''
+        self.desc.value = ''
+        self.parentApp.switchFormPrevious()
 
 ####################################
 # Create Armor Attachment Form
@@ -281,12 +526,36 @@ class CreateWeapon(nps.FormBaseNewWithMenus):
 class CreateArmorAttachment(nps.FormBaseNewWithMenus):
     def create(self):
         self.name = 'GENESYS DATABASE - CREATE - ARMOR ATTACHMENT'
+
+        self.menu = self.new_menu()
+        self.menu.addItem(text='CREATE', onSelect=self.create_attachment)
+        self.menu.addItem(text='CANCEL', onSelect=self.cancel)
             
         self.attach = self.add(nps.TitleText, name='ATTACHMENT')
         self.hp = self.add(nps.TitleText, name='HARDPOINTS')
         self.price = self.add(nps.TitleText, name='PRICE')
         self.rarity = self.add(nps.TitleText, name='RARITY')
         self.desc = self.add(InputBox, name='DESCRIPTION')
+        
+    def create_attachment(self):
+    	data = {
+    		'name': self.attach.value,
+    		'hardpoints': self.hp.value,
+    		'price': self.price.value,
+    		'rarity': self.rarity.value,
+    		'description': self.desc.value,
+    		'armor': True
+    	}
+    	self.parentApp.dbhandler.add_attachment(data)
+    	self.cancel()
+
+    def cancel(self):
+        self.attach.value = ''
+        self.hp.value = ''
+        self.price.value = ''
+        self.rarity.value = ''
+        self.desc.value = ''
+        self.parentApp.switchFormPrevious()
 
 ####################################
 # Create Weapon Attachment Form
@@ -296,11 +565,35 @@ class CreateWeaponAttachment(nps.FormBaseNewWithMenus):
     def create(self):
         self.name = 'GENESYS DATABASE - CREATE - WEAPON ATTACHMENT'
 
+        self.menu = self.new_menu()
+        self.menu.addItem(text='CREATE', onSelect=self.create_weapon_attachment)
+        self.menu.addItem(text='CANCEL', onSelect=self.cancel)
+
         self.attach = self.add(nps.TitleText, name='ATTACHMENT')
         self.hp = self.add(nps.TitleText, name='HARDPOINTS')
         self.price = self.add(nps.TitleText, name='PRICE')
         self.rarity = self.add(nps.TitleText, name='RARITY')
         self.desc = self.add(InputBox, name='DESCRIPTION')
+
+    def create_weapon_attachment(self):
+        data = {
+            'name': self.attach.value,
+            'hardpoints': self.hp.value,
+            'price': self.price.value,
+            'rarity': self.rarity.value,
+            'description': self.desc.value,
+            'armor': False
+        }
+        self.parentApp.dbhandler.add_attachment(data)
+        self.cancel()
+
+    def cancel(self):
+        self.attach.value = ''
+        self.hp.value = ''
+        self.price.value = ''
+        self.rarity.value = ''
+        self.desc.value = ''
+        self.parentApp.switchFormPrevious()
 
 ####################################
 # Main Menu Form
@@ -314,9 +607,27 @@ class MainMenu(nps.FormBaseNew):
         self.selector.values = ('NEW SETTING', 'OPEN SETTING', 'EXIT')
         self.selector.menu_actions = {
             'NEW SETTING': 'NEWSETTING',
-            #'OPEN SETTING': 'OPENSETTING'
+            'OPEN SETTING': 'OPENSETTING'
         }
 
+
+####################################
+# Open Setting Form
+####################################
+
+class OpenSetting(nps.ActionFormV2):
+    def create(self):
+        self.name = 'GENESYS DATABASE - OPEN SETTING'
+
+        self.path = self.add(nps.TitleFilename, name='Path')
+
+    def on_ok(self):
+        self.parentApp.dbhandler.open_db(self.path.value)
+        self.parentApp.switchForm('SETTINGMENU')
+
+    def on_cancel(self):
+        self.path.value = ''
+        self.parentApp.switchFormPrevious()
 
 ####################################
 # Setting Menu Form
@@ -332,7 +643,6 @@ class SettingMenu(nps.FormBaseNew):
             'CREATE': 'CREATE',
             'BROWSE': 'SEARCH'
         }
-
 
 ####################################
 # Create Entry Menu Form
@@ -378,6 +688,7 @@ class GenDB(nps.NPSAppManaged):
         self.dbhandler = DatabaseHandler()
         self.addForm('MAIN', MainMenu)
         self.addForm('NEWSETTING', NewSetting)
+        self.addForm('OPENSETTING', OpenSetting)
         self.addForm('SETTINGMENU', SettingMenu)
         self.addForm('CREATE', CreateMenu)
         #self.addForm('SEARCH', SearchMenu)
