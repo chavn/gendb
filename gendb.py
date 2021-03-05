@@ -234,6 +234,19 @@ class DatabaseHandler(object):
 
 	def update_weapon(self, data):
 		pass
+		
+	def get_all_weapons(self):
+		c = self.db.cursor()
+		c.execute('SELECT * FROM weapons')
+		weapons = c.fetchall()
+		c.close()
+		return weapons
+		
+	def delete_weapon(self, id):
+		c = self.db.cursor()
+		c.execute('DELETE FROM weapons WHERE id=?', (id,))
+		self.db.commit()
+		c.close()
 
 	def add_armor(self, data):
 		c = self.db.cursor()
@@ -249,6 +262,13 @@ class DatabaseHandler(object):
 
 	def update_armor(self, data):
 		pass
+		
+	def get_all_armor(self):
+		c = self.db.cursor()
+		c.execute('SELECT * FROM armor')
+		armor = c.fetchall()
+		c.close()
+		return armor
 
 	def add_gear(self, data):
 		c = self.db.cursor()
@@ -264,8 +284,6 @@ class DatabaseHandler(object):
 	def update_gear(self, data):
 		pass
 
-	def remove_entry(self, table, id):
-		pass
 
 ####################################
 # Custom Widgets
@@ -276,6 +294,18 @@ class InputBox(nps.BoxTitle):
 	_contained_widget = nps.MultiLineEdit
 
 
+# Record list for browsing
+class RecordList(nps.MultiLineAction):
+	def __init__(self, *args, **keywords):
+		super(RecordList, self).__init__(*args, **keywords)
+		
+	def display_value(self, vl):
+		return 'ID: %s\t - \t NAME: %s' % (vl[0], vl[1])
+		
+	def get_id(self):
+		return int(self.values[self.cursor_line][0])
+	
+	
 class MenuSelect(nps.MultiLineAction):
 	def __init__(self, *args, **keywords):
 		super(MenuSelect, self).__init__(*args, **keywords)
@@ -288,7 +318,7 @@ class MenuSelect(nps.MultiLineAction):
 			self.parent.parentApp.switchFormPrevious()
 		elif act_on_this == 'EXIT':
 			self.parent.parentApp.switchForm(None)
-		elif act_on_this == 'CLOSE':
+		elif act_on_this == 'CLOSE SETTING':
 			self.parent.parentApp.dbhandler.close_db()
 			self.parent.parentApp.switchForm('MAIN')
 
@@ -296,395 +326,45 @@ class MenuSelect(nps.MultiLineAction):
 # New Setting Form
 ####################################
 
-class NewSetting(nps.FormBaseNewWithMenus):
+class NewSetting(nps.ActionFormV2):
 	def create(self):
 		self.name = 'GENESYS DATABASE - NEW SETTING'
-
-		self.menu = self.new_menu()
-		self.menu.addItem(text='CREATE', onSelect=self.create_setting)
-		self.menu.addItem(text='CANCEL', onSelect=self.cancel)
 
 		self.path = self.add(nps.TitleFilename, name='PATH')
 		self.setting = self.add(nps.TitleText, name='TITLE')
 		self.author = self.add(nps.TitleText, name='AUTHOR')
-		self.genre = self.add(nps.TitleText, name='MAIN GENRE')
+		self.genre = self.add(nps.TitleText, name='MAIN GENRE(S)')
 		self.overview = self.add(InputBox, name='OVERVIEW')
 
-	def create_setting(self):
-		res = self.parentApp.dbhandler.setup_database(
-			self.path.value,
-			self.setting.value,
-			self.author.value,
-			self.genre.value,
-			self.overview.value
-		)
-		if res < 1:
-			self.parentApp.switchForm('SETTINGMENU')
+	def on_ok(self):
+		if self.setting.value == '':
+			self.empty_title()
+		else:
+			res = self.parentApp.dbhandler.setup_database(
+				self.path.value,
+				self.setting.value,
+				self.author.value,
+				self.genre.value,
+				self.overview.value
+			)
+			if res < 1:
+				self.clear_items()
+				self.parentApp.switchForm('SETTINGMENU')
 
-	def cancel(self):
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
 		self.setting.value = ''
+		self.path.value = ''
 		self.author.value = ''
 		self.genre.value = ''
 		self.overview.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Create Talent Form
-####################################
-
-class CreateTalent(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - TALENT'
-
-		self.menu = self.new_menu()
-		self.menu.addItem(text='CREATE', onSelect=self.create_talent)
-		self.menu.addItem(text='CANCEL', onSelect=self.cancel)
 	
-		self.tal = self.add(nps.TitleText, name='TALENT')
-		self.tier = self.add(nps.TitleText, name='TIER')
-		self.act = self.add(nps.TitleText, name='ACTIVATION')
-		self.rank = self.add(nps.Checkbox, name='RANKED')
-		self.desc = self.add(InputBox, name='DESCRIPTION')
-	
-	def create_talent(self):
-		data = {
-			'name': self.tal.value,
-			'tier': self.tier.value,
-			'activation': self.tier.value,
-			'ranked': self.rank.value,
-			'description': self.desc.value
-		}
-		self.parentApp.dbhandler.add_talent(data)
-		self.cancel()
-	
-	def cancel(self):
-		self.tal.value = ''
-		self.tier.value = ''
-		self.act.value = ''
-		self.rank.value = False
-		self.desc.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Create Skill Form
-####################################
-
-class CreateSkill(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - SKILL'
-
-		self.menu = self.new_menu()
-		self.menu.addItem(text='CREATE', onSelect=self.create_skill)
-		self.menu.addItem(text='CANCEL', onSelect=self.cancel)
-
-		self.skill = self.add(nps.TitleText, name='SKILL', begin_entry_at=17)
-		self.cat = self.add(nps.TitleText, name='CATEGORY', begin_entry_at=17)
-		self.char = self.add(nps.TitleText, name='CHARACTERISTIC',
-			begin_entry_at=17)
-		self.desc = self.add(InputBox, name='DESCRIPTION', max_height=7)
-		self.dos = self.add(InputBox, name='SHOULD USE IF...', max_height=6)
-		self.dont = self.add(InputBox, name='SHOULD NOT USE IF...',
-			max_height=6)
-			
-	def create_skill(self):
-		data = {
-			'name': self.skill.value,
-			'category': self.cat.value,
-			'characteristic': self.char.value,
-			'description': self.desc.value,
-			'should': self.dos.value,
-			'shouldnt': self.dont.value
-		}
-		self.parentApp.dbhandler.add_skill(data)
-		self.cancel()
-
-	def cancel(self):
-		self.skill.value = ''
-		self.cat.value = ''
-		self.char.value = ''
-		self.desc.value = ''
-		self.dos.value = ''
-		self.dont.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Create Gear/Item Form
-####################################
-
-class CreateGear(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - GEAR'
-
-		self.menu = self.new_menu()
-		self.menu.addItem(text='CREATE', onSelect=self.create_gear)
-		self.menu.addItem(text='CANCEL', onSelect=self.cancel)
-
-		self.type = self.add(nps.TitleText, name='TYPE')
-		self.cat = self.add(nps.TitleText, name='CATEGORY')
-		self.encum = self.add(nps.TitleText, name='ENCUMBRANCE')
-		self.price = self.add(nps.TitleText, name='PRICE')
-		self.rarity = self.add(nps.TitleText, name='RARITY')
-		self.desc = self.add(InputBox, name='DESCRIPTION')
-		
-	def create_gear(self):
-		data = {
-			'name': self.type.value,
-			'category': self.cat.value,
-			'encumbrance': self.encum.value,
-			'price': self.price.value,
-			'rarity': self.rarity.value,
-			'description': self.desc.value
-		}
-		self.parentApp.dbhandler.add_gear(data)
-		self.cancel()
-
-	def cancel(self):
-		self.type.value = ''
-		self.cat.value = ''
-		self.encum.value = ''
-		self.price.value = ''
-		self.rarity.value = ''
-		self.desc.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Create Armor Form
-####################################
-
-class CreateArmor(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - ARMOR'
-
-		self.menu = self.new_menu()
-		self.menu.addItem(text='CREATE', onSelect=self.create_armor)
-		self.menu.addItem(text='CANCEL', onSelect=self.cancel)
-
-		self.type = self.add(nps.TitleText, name='TYPE')
-		self.cat = self.add(nps.TitleText, name='CATEGORY')
-		self.defen = self.add(nps.TitleText, name='DEFENSE')
-		self.soak = self.add(nps.TitleText, name='SOAK')
-		self.encum = self.add(nps.TitleText, name='ENCUMBRANCE')
-		self.price = self.add(nps.TitleText, name='PRICE')
-		self.rarity = self.add(nps.TitleText, name='RARITY')
-		self.desc = self.add(InputBox, name='DESCRIPTION')
-		
-	def create_armor(self):
-		data = {
-			'name': self.type.value,
-			'category': self.cat.value,
-			'defense': self.defen.value,
-			'soak': self.soak.value,
-			'encumbrance': self.encum.value,
-			'price': self.price.value,
-			'rarity': self.rarity.value,
-			'description': self.desc.value
-		}
-		self.parentApp.dbhandler.add_armor(data)
-		self.cancel()
-
-	def cancel(self):
-		self.type.value = ''
-		self.cat.value = ''
-		self.defen.value = ''
-		self.soak.value = ''
-		self.encum.value = ''
-		self.price.value = ''
-		self.rarity.value = ''
-		self.desc.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Create Weapon Form
-####################################
-
-class CreateWeapon(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - WEAPON'
-
-		self.menu = self.new_menu()
-		self.menu.addItem(text='CREATE', onSelect=self.create_weapon)
-		self.menu.addItem(text='CANCEL', onSelect=self.cancel)
-
-		self.type = self.add(nps.TitleText, name='NAME')
-		self.cat = self.add(nps.TitleText, name='CATEGORY')
-		self.skill = self.add(nps.TitleText, name='SKILL')
-		self.dam = self.add(nps.TitleText, name='DAMAGE')
-		self.crit = self.add(nps.TitleText, name='CRITICAL')
-		self.range = self.add(nps.TitleText, name='RANGE')
-		self.encum = self.add(nps.TitleText, name='ENCUMBRANCE')
-		self.price = self.add(nps.TitleText, name='PRICE')
-		self.rarity = self.add(nps.TitleText, name='RARITY')
-		self.special = self.add(nps.TitleText, name='SPECIAL')
-		self.desc = self.add(InputBox, name='DESCRIPTION')
-		
-	def create_weapon(self):
-		data = {
-			'name': self.type.value,
-			'category': self.cat.value,
-			'skill': self.skill.value,
-			'damage': self.dam.value,
-			'critical': self.crit.value,
-			'range': self.range.value,
-			'encumbrance': self.encum.value,
-			'price': self.price.value,
-			'rarity': self.rarity.value,
-			'special': self.special.value,
-			'description': self.desc.value
-		}
-		self.parentApp.dbhandler.add_weapon(data)
-		self.cancel()
-
-	def cancel(self):
-		self.type.value = ''
-		self.cat.value = ''
-		self.skill.value = ''
-		self.dam.value = ''
-		self.crit.value = ''
-		self.range.value = ''
-		self.encum.value = ''
-		self.price.value = ''
-		self.rarity.value = ''
-		self.special.value = ''
-		self.desc.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Create Armor Attachment Form
-####################################
-
-class CreateArmorAttachment(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - ARMOR ATTACHMENT'
-
-		self.menu = self.new_menu()
-		self.menu.addItem(text='CREATE', onSelect=self.create_attachment)
-		self.menu.addItem(text='CANCEL', onSelect=self.cancel)
-			
-		self.attach = self.add(nps.TitleText, name='ATTACHMENT')
-		self.hp = self.add(nps.TitleText, name='HARDPOINTS')
-		self.price = self.add(nps.TitleText, name='PRICE')
-		self.rarity = self.add(nps.TitleText, name='RARITY')
-		self.desc = self.add(InputBox, name='DESCRIPTION')
-		
-	def create_attachment(self):
-		data = {
-			'name': self.attach.value,
-			'hardpoints': self.hp.value,
-			'price': self.price.value,
-			'rarity': self.rarity.value,
-			'description': self.desc.value,
-			'armor': True
-		}
-		self.parentApp.dbhandler.add_attachment(data)
-		self.cancel()
-
-	def cancel(self):
-		self.attach.value = ''
-		self.hp.value = ''
-		self.price.value = ''
-		self.rarity.value = ''
-		self.desc.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Create Weapon Attachment Form
-####################################
-
-class CreateWeaponAttachment(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - WEAPON ATTACHMENT'
-
-		self.menu = self.new_menu()
-		self.menu.addItem(text='CREATE', onSelect=self.create_weapon_attachment)
-		self.menu.addItem(text='CANCEL', onSelect=self.cancel)
-
-		self.attach = self.add(nps.TitleText, name='ATTACHMENT')
-		self.hp = self.add(nps.TitleText, name='HARDPOINTS')
-		self.price = self.add(nps.TitleText, name='PRICE')
-		self.rarity = self.add(nps.TitleText, name='RARITY')
-		self.desc = self.add(InputBox, name='DESCRIPTION')
-
-	def create_weapon_attachment(self):
-		data = {
-			'name': self.attach.value,
-			'hardpoints': self.hp.value,
-			'price': self.price.value,
-			'rarity': self.rarity.value,
-			'description': self.desc.value,
-			'armor': False
-		}
-		self.parentApp.dbhandler.add_attachment(data)
-		self.cancel()
-
-	def cancel(self):
-		self.attach.value = ''
-		self.hp.value = ''
-		self.price.value = ''
-		self.rarity.value = ''
-		self.desc.value = ''
-		self.parentApp.switchFormPrevious()
-		
-####################################
-# Create Trope Form
-####################################
-class CreateTrope(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - TROPE'
-		
-		self.trope = self.add(nps.TitleText, name='TROPE')
-		self.desc = self.add(InputBox, name='DESCRIPTION')
-		
-	def create_trope(self):
-		data = {
-			'name': self.trope.value,
-			'description': self.desc.value
-		}
-		self.parentApp.dbhandler.add_trope(data)
-		self.cancel()
-		
-	def cancel(self):
-		self.trope.value = ''
-		self.desc.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Create Tone Form
-####################################
-class CreateTone(nps.FormBaseNewWithMenus):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE - TONE'
-		
-		self.tone = self.add(nps.TitleText, name='TONE')
-		self.desc = self.add(InputBox, name='DESCRIPTION')
-		
-	def create_trope(self):
-		data = {
-			'name': self.tone.value,
-			'description': self.desc.value
-		}
-		self.parentApp.dbhandler.add_tone(data)
-		self.cancel()
-		
-	def cancel(self):
-		self.tone.value = ''
-		self.desc.value = ''
-		self.parentApp.switchFormPrevious()
-
-####################################
-# Main Menu Form
-####################################
-
-class MainMenu(nps.FormBaseNew):
-	def create(self):
-		self.name = 'GENESYS DATABASE'
-
-		self.selector = self.add(MenuSelect)
-		self.selector.values = ('NEW SETTING', 'OPEN SETTING', 'EXIT')
-		self.selector.menu_actions = {
-			'NEW SETTING': 'NEWSETTING',
-			'OPEN SETTING': 'OPENSETTING'
-		}
-
+	def empty_title(self):
+		message = 'The "TITLE" field requires input.'
+		nps.notify_confirm(message, title='Title Required', editw=1)
 
 ####################################
 # Open Setting Form
@@ -710,49 +390,530 @@ class OpenSetting(nps.ActionFormV2):
 
 class SettingMenu(nps.FormBaseNew):
 	def create(self):
-		self.name = 'GENESYS DATABASE - SETTING MENU'
-
-		self.selector = self.add(MenuSelect)
-		self.selector.values = ('CREATE', 'BROWSE', 'CLOSE')
-		self.selector.menu_actions = {
-			'CREATE': 'CREATE',
-			'BROWSE': 'SEARCH'
-		}
-
-####################################
-# Create Entry Menu Form
-####################################
-
-class CreateMenu(nps.FormBaseNew):
-	def create(self):
-		self.name = 'GENESYS DATABASE - CREATE'
+		self.name = 'GENESYS DATABASE - SETTING BROWSER'
 		
 		self.menu = self.add(MenuSelect)
 		self.menu.values = (
-			'TROPE', 'TONE', 'ARCHETYPE/SPECIES', 'CAREER',
-			'FACTION/ORGANIZATION',
-			'HEROIC ABILITY', 'SKILL', 'TALENT', 'WEAPON',
-			'WEAPON ATTACHMENT', 'ARMOR', 'ARMOR ATTACHMENT',
-			'GEAR', 'BACK'
+			'TROPES', 'TONES', '!ARCHETYPES/SPECIES', '!CAREERS',
+			'!FACTIONS/ORGANIZATIONS',
+			'!HEROIC ABILITIES', 'SKILLS', 'TALENTS', 'WEAPONS',
+			'WEAPON ATTACHMENTS', 'ARMOR', 'ARMOR ATTACHMENTS',
+			'GEAR', 'CLOSE SETTING'
 		)
 
 		self.menu.menu_actions = {
-			'SKILL': 'CREATE_SKILL',
-			'TALENT': 'CREATE_TALENT',
-			'WEAPON': 'CREATE_WEAPON',
-			'WEAPON ATTACHMENT': 'CREATE_WEAPATT',
-			'ARMOR': 'CREATE_ARMOR',
-			'ARMOR ATTACHMENT': 'CREATE_ARMATT',
-			'GEAR': 'CREATE_GEAR'
+			'TROPES': 'BROWSE_TROPES',
+			'TONES': 'BROWSE_TONES',
+			'SKILLS': 'BROWSE_SKILLS',
+			'TALENTS': 'BROWSE_TALENTS',
+			'WEAPONS': 'BROWSE_WEAPONS',
+			'WEAPON ATTACHMENTS': 'BROWSE_WEAPATTS',
+			'ARMOR': 'BROWSE_ARMOR',
+			'ARMOR ATTACHMENTS': 'BROWSE_ARMATTS',
+			'GEAR': 'BROWSE_GEAR'
 		}
 
 ####################################
-# Search Entry Menu Form - To Edit
+# Create Talent Form
 ####################################
 
-class SearchMenu(nps.FormBaseNew):
+class CreateTalent(nps.ActionFormV2):
 	def create(self):
-		self.name = 'GENESYS DATABASE - SEARCH'
+		self.name = 'GENESYS DATABASE - CREATE - TALENT'
+	
+		self.tal = self.add(nps.TitleText, name='TALENT')
+		self.tier = self.add(nps.TitleText, name='TIER')
+		self.act = self.add(nps.TitleText, name='ACTIVATION')
+		self.rank = self.add(nps.Checkbox, name='RANKED')
+		self.desc = self.add(InputBox, name='DESCRIPTION')
+	
+	def on_ok(self):
+		if self.tal.value == '':
+			self.empty_name()
+		else:
+			data = {
+				'name': self.tal.value,
+				'tier': self.tier.value,
+				'activation': self.tier.value,
+				'ranked': self.rank.value,
+				'description': self.desc.value
+			}
+			self.clear_items()
+			self.parentApp.dbhandler.add_talent(data)
+			self.parentApp.switchFormPrevious()
+	
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
+		self.tal.value = ''
+		self.tier.value = ''
+		self.act.value = ''
+		self.rank.value = False
+		self.desc.value = ''
+
+		
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Title Required', editw=1)
+
+####################################
+# Create Skill Form
+####################################
+
+class CreateSkill(nps.ActionFormV2):
+	def create(self):
+		self.name = 'GENESYS DATABASE - CREATE - SKILL'
+
+		self.skill = self.add(nps.TitleText, name='NAME', begin_entry_at=17)
+		self.cat = self.add(nps.TitleText, name='CATEGORY', begin_entry_at=17)
+		self.char = self.add(nps.TitleText, name='CHARACTERISTIC',
+			begin_entry_at=17)
+		self.desc = self.add(InputBox, name='DESCRIPTION', max_height=6)
+		self.dos = self.add(InputBox, name='SHOULD USE IF...', max_height=6)
+		self.dont = self.add(InputBox, name='SHOULD NOT USE IF...',
+			max_height=6)
+			
+	def on_ok(self):
+		if self.skill.value == '':
+			self.empty_name()
+		else:
+			data = {
+				'name': self.skill.value,
+				'category': self.cat.value,
+				'characteristic': self.char.value,
+				'description': self.desc.value,
+				'should': self.dos.value,
+				'shouldnt': self.dont.value
+			}
+			clear_items()
+			self.parentApp.dbhandler.add_skill(data)
+			self.parentApp.switchFormPrevious()
+
+	def on_cancel(self):
+		clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
+		self.skill.value = ''
+		self.cat.value = ''
+		self.char.value = ''
+		self.desc.value = ''
+		self.dos.value = ''
+		self.dont.value = ''
+		
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Name Required', editw=1)
+
+####################################
+# Create Gear/Item Form
+####################################
+
+class CreateGear(nps.ActionFormV2):
+	def create(self):
+		self.name = 'GENESYS DATABASE - CREATE - GEAR'
+
+		self.type = self.add(nps.TitleText, name='NAME')
+		self.cat = self.add(nps.TitleText, name='CATEGORY')
+		self.encum = self.add(nps.TitleText, name='ENCUMBRANCE')
+		self.price = self.add(nps.TitleText, name='PRICE')
+		self.rarity = self.add(nps.TitleText, name='RARITY')
+		self.desc = self.add(InputBox, name='DESCRIPTION')
+		
+	def on_ok(self):
+		if self.type.value == '':
+			self.empty_name()
+		else:
+			data = {
+				'name': self.type.value,
+				'category': self.cat.value,
+				'encumbrance': self.encum.value,
+				'price': self.price.value,
+				'rarity': self.rarity.value,
+				'description': self.desc.value
+			}
+			self.clear_items()
+			self.parentApp.dbhandler.add_gear(data)
+			self.parentApp.switchFormPrevious()
+
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
+		self.type.value = ''
+		self.cat.value = ''
+		self.encum.value = ''
+		self.price.value = ''
+		self.rarity.value = ''
+		self.desc.value = ''
+		
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Name Required', editw=1)
+
+####################################
+# Browse Armor Form
+####################################
+
+class BrowseArmor(nps.FormBaseNewWithMenus):
+	def beforeEditing(self):
+		self.arm.values = self.parentApp.dbhandler.get_all_armor()
+
+	def create(self):
+		self.name = 'GENESYS DATABASE - BROWSE - ARMOR'
+		
+		self.menu = self.new_menu(name='ARMOR MENU')
+		self.menu.addItem(text='CREATE', onSelect=self.create_armor)
+		self.menu.addItem(text='EDIT', onSelect=self.edit_armor)
+		self.menu.addItem(text='DELETE', onSelect=self.delete_armor)
+		self.menu.addItem(text='BACK', onSelect=self.back)
+		
+		self.arm = self.add(RecordList)
+		
+	def create_armor(self):
+		self.arm.values = ()
+		self.parentApp.switchForm('CREATE_ARMOR')
+	
+	def delete_armor(self):
+		self.parentApp.dbhandler.delete_armor(self.arm.get_id())
+		self.arm.values = self.parentApp.dbhandler.get_all_armor()
+		
+	def edit_armor(self):
+		data = self.arm.values[self.arm.cursor_line]
+		form = self.parentApp.getForm('CREATE_ARMOR')
+		formFields = form.fields
+		form.id = data[0]
+		form.name = 'GENESYS DATABASE - EDIT - ARMOR - ' + data[1]
+		for i, field in enumerate(formFields):
+			field.value = data[i + 1]
+		
+		self.parentApp.switchForm('CREATE_WEAPON')
+		
+	def back(self):
+		self.arm.values = ()
+		self.parentApp.switchFormPrevious()
+
+####################################
+# Create/Edit Armor Form
+####################################
+
+class CreateArmor(nps.ActionFormV2):
+	def create(self):
+		self.standard_name = 'GENESYS DATABASE - CREATE - ARMOR'
+		self.name = self.standard_name
+		
+		self.id = ''
+		self.fields = (
+			self.add(nps.TitleText, name='NAME'),
+			self.add(nps.TitleText, name='CATEGORY'),
+			self.add(nps.TitleText, name='DEFENSE'),
+			self.add(nps.TitleText, name='SOAK'),
+			self.add(nps.TitleText, name='ENCUMBRANCE'),
+			self.add(nps.TitleText, name='PRICE'),
+			self.add(nps.TitleText, name='RARITY'),
+			self.add(InputBox, name='DESCRIPTION'),
+		)
+		
+	def on_ok(self):
+		if self.fields[0].value == '':
+			self.empty_name()
+		else:
+			data = {}
+			for field in self.fields:
+				data[field.name.lower()] = field.value
+			if self.id == '':
+				self.parentApp.dbhandler.add_armor(data)
+			else:
+				self.parentApp.dbhandler.update_armor(self.id, data)
+			clear_items()
+			self.parentApp.switchFormPrevious()
+
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items():
+		self.name = self.standard_name
+		self.id = ''
+		for field in self.fields:
+			field.value = ''
+		
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Name Required', editw=1)
+
+####################################
+# Browse Weapons Form
+####################################
+
+class BrowseWeapons(nps.FormBaseNewWithMenus):
+	def beforeEditing(self):
+		self.weap.values = self.parentApp.dbhandler.get_all_weapons()
+
+	def create(self):
+		self.name = 'GENESYS DATABASE - BROWSE - WEAPONS'
+		
+		self.menu = self.new_menu(name='WEAPONS MENU')
+		self.menu.addItem(text='CREATE', onSelect=self.create_weapon)
+		self.menu.addItem(text='EDIT', onSelect=self.edit_weapon)
+		self.menu.addItem(text='DELETE', onSelect=self.delete_weapon)
+		self.menu.addItem(text='BACK', onSelect=self.back)
+		
+		self.weap = self.add(RecordList)
+		
+	def create_weapon(self):
+		self.weap.values = ()
+		self.parentApp.switchForm('CREATE_WEAPON')
+	
+	def delete_weapon(self):
+		self.parentApp.dbhandler.delete_weapon(self.weap.get_id())
+		self.weap.values = self.parentApp.dbhandler.get_all_weapons()
+		
+	def edit_weapon(self):
+		data = self.weap.values[self.weap.cursor_line]
+		form = self.parentApp.getForm('CREATE_WEAPON')
+		formFields = form.fields
+		form.id = data[0]
+		form.name = 'GENESYS DATABASE - EDIT - WEAPON - ' + data[1]
+		for i, field in enumerate(formFields):
+			field.value = data[i + 1]
+		
+		self.parentApp.switchForm('CREATE_WEAPON')
+		
+	def back(self):
+		self.weap.values = ()
+		self.parentApp.switchFormPrevious()
+		
+####################################
+# Create/Edit Weapon Form
+####################################
+
+class CreateWeapon(nps.ActionFormV2):
+	
+	def create(self):
+		self.standard_name = 'GENESYS DATABASE - CREATE - WEAPON'
+		self.name = self.standard_name
+		
+		self.id = ''
+		self.fields = (
+			self.add(nps.TitleText, name='NAME'),
+			self.add(nps.TitleText, name='CATEGORY'),
+			self.add(nps.TitleText, name='SKILL'),
+			self.add(nps.TitleText, name='DAMAGE'),
+			self.add(nps.TitleText, name='CRITICAL'),
+			self.add(nps.TitleText, name='RANGE'),
+			self.add(nps.TitleText, name='ENCUMBRANCE'),
+			self.add(nps.TitleText, name='PRICE'),
+			self.add(nps.TitleText, name='RARITY'),
+			self.add(nps.TitleText, name='SPECIAL'),
+			self.add(InputBox, name='DESCRIPTION')
+		)
+		
+	def on_ok(self):
+		if self.fields[0].value == '':
+			self.empty_name()
+		else:
+			data = {}
+			for field in fields:
+				data[field.name.lower()] = field.value
+			self.name = self.standard_name
+			if self.id == '':
+				self.parentApp.dbhandler.add_weapon(data)
+			else:
+				self.parentapp.dbhandler.update_weapon(self.id, data)
+			self.clear_items()
+			self.parentApp.switchFormPrevious()
+
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
+		self.name = self.standard_name
+		self.id = ''
+		for field in self.fields:
+			field.value = ''
+		
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Name Required', editw=1)
+
+####################################
+# Create Armor Attachment Form
+####################################
+
+class CreateArmorAttachment(nps.ActionFormV2):
+	def create(self):
+		self.name = 'GENESYS DATABASE - CREATE - ARMOR ATTACHMENT'
+			
+		self.attach = self.add(nps.TitleText, name='NAME')
+		self.hp = self.add(nps.TitleText, name='HARDPOINTS')
+		self.price = self.add(nps.TitleText, name='PRICE')
+		self.rarity = self.add(nps.TitleText, name='RARITY')
+		self.desc = self.add(InputBox, name='DESCRIPTION')
+		
+	def on_ok(self):
+		if self.attach.value == '':
+			self.empty_name()
+		else:
+			data = {
+				'name': self.attach.value,
+				'hardpoints': self.hp.value,
+				'price': self.price.value,
+				'rarity': self.rarity.value,
+				'description': self.desc.value,
+				'armor': True
+			}
+			self.clear_items()
+			self.parentApp.dbhandler.add_attachment(data)
+			self.parentApp.switchFormPrevious()
+
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+
+	def clear_items(self):
+		self.attach.value = ''
+		self.hp.value = ''
+		self.price.value = ''
+		self.rarity.value = ''
+		self.desc.value = ''
+
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Name Required', editw=1)
+
+####################################
+# Create Weapon Attachment Form
+####################################
+
+class CreateWeaponAttachment(nps.ActionFormV2):
+	def create(self):
+		self.name = 'GENESYS DATABASE - CREATE - WEAPON ATTACHMENT'
+
+		self.attach = self.add(nps.TitleText, name='NAME')
+		self.hp = self.add(nps.TitleText, name='HARDPOINTS')
+		self.price = self.add(nps.TitleText, name='PRICE')
+		self.rarity = self.add(nps.TitleText, name='RARITY')
+		self.desc = self.add(InputBox, name='DESCRIPTION')
+
+	def on_ok(self):
+		if self.attach.value == '':
+			self.empty_name()
+		else:
+			data = {
+				'name': self.attach.value,
+				'hardpoints': self.hp.value,
+				'price': self.price.value,
+				'rarity': self.rarity.value,
+				'description': self.desc.value,
+				'armor': False
+			}
+			self.clear_items()
+			self.parentApp.dbhandler.add_attachment(data)
+			self.parentApp.switchFormPrevious()
+
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
+		self.attach.value = ''
+		self.hp.value = ''
+		self.price.value = ''
+		self.rarity.value = ''
+		self.desc.value = ''
+		
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Name Required', editw=1)
+		
+####################################
+# Create Trope Form
+####################################
+class CreateTrope(nps.ActionFormV2):
+	def create(self):
+		self.name = 'GENESYS DATABASE - CREATE - TROPE'
+		
+		self.trope = self.add(nps.TitleText, name='NAME')
+		self.desc = self.add(InputBox, name='DESCRIPTION')
+		
+	def on_ok(self):
+		if self.trope.value == '':
+			self.empty_name()
+		else:
+			data = {
+				'name': self.trope.value,
+				'description': self.desc.value
+			}
+			self.clear_items()
+			self.parentApp.dbhandler.add_trope(data)
+			self.parentApp.switchFormPrevious()
+		
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
+		self.trope.value = ''
+		self.desc.value = ''
+		
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Name Required', editw=1)
+
+####################################
+# Create Tone Form
+####################################
+class CreateTone(nps.ActionFormV2):
+	def create(self):
+		self.name = 'GENESYS DATABASE - CREATE - TONE'
+		
+		self.tone = self.add(nps.TitleText, name='NAME')
+		self.desc = self.add(InputBox, name='DESCRIPTION')
+		
+	def on_ok(self):
+		if self.tone.value == '':
+			self.empty_name()
+		else:
+			data = {
+				'name': self.tone.value,
+				'description': self.desc.value
+			}
+			self.clear_items()
+			self.parentApp.dbhandler.add_tone(data)
+			self.parentApp.switchFormPrevious()
+		
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
+		self.tone.value = ''
+		self.desc.value = ''
+	
+	def empty_name(self):
+		message = 'The "NAME" field requires input.'
+		nps.notify_confirm(message, title='Name Required', editw=1)
+
+####################################
+# Main Menu Form
+####################################
+
+class MainMenu(nps.FormBaseNew):
+	def create(self):
+		self.name = 'GENESYS DATABASE'
+
+		self.selector = self.add(MenuSelect)
+		self.selector.values = ('NEW SETTING', 'OPEN SETTING', 'EXIT')
+		self.selector.menu_actions = {
+			'NEW SETTING': 'NEWSETTING',
+			'OPEN SETTING': 'OPENSETTING'
+		}
+
 
 ####################################
 # Compile Menu Form
@@ -769,13 +930,16 @@ class CompileMenu(nps.FormBaseNewWithMenus):
 class GenDB(nps.NPSAppManaged):
 	def onStart(self):
 		self.dbhandler = DatabaseHandler()
+		# SETTING MENUS
 		self.addForm('MAIN', MainMenu)
 		self.addForm('NEWSETTING', NewSetting)
 		self.addForm('OPENSETTING', OpenSetting)
 		self.addForm('SETTINGMENU', SettingMenu)
-		self.addForm('CREATE', CreateMenu)
-		#self.addForm('SEARCH', SearchMenu)
 		#self.addForm('COMPILE', CompileMenu)
+		# BROWSE MENUS
+		self.addForm('BROWSE_WEAPONS', BrowseWeapons)
+		self.addForm('BROWSE_ARMOR', BrowseArmor)
+		# CREATE MENUS
 		self.addForm('CREATE_SKILL', CreateSkill)
 		self.addForm('CREATE_TALENT', CreateTalent)
 		self.addForm('CREATE_WEAPON', CreateWeapon)
@@ -783,6 +947,8 @@ class GenDB(nps.NPSAppManaged):
 		self.addForm('CREATE_ARMOR', CreateArmor)
 		self.addForm('CREATE_ARMATT', CreateArmorAttachment)
 		self.addForm('CREATE_GEAR', CreateGear)
+		self.addForm('CREATE_TROPE', CreateTrope)
+		self.addForm('CREATE_TONE', CreateTone)
 
 ####################################
 # Main Function
