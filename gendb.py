@@ -139,11 +139,22 @@ class DatabaseHandler(object):
 			return 0
 
 	### SETTING RECORDS
-	def udpdate_setting(self, data):
-		pass
+	def update_setting(self, data):
+		c = self.db.cursor()
+		c.execute(
+			'UPDATE setting SET name=?, author=?, genre=?, overview=?',
+			(data['title'], data['author'], data['main genre(s)'],
+			data['overview'])
+		)
+		self.db.commit()
+		c.close
 		
 	def get_setting(self):
-		pass
+		c = self.db.cursor()
+		c.execute('SELECT * FROM setting')
+		setting = c.fetchone()
+		c.close()
+		return setting
 
 	### TROPE RECORDS
 	def add_trope(self, data):
@@ -600,6 +611,49 @@ class NewSetting(nps.ActionFormV2):
 		self.author.value = ''
 		self.genre.value = ''
 		self.overview.value = ''
+	
+	def empty_title(self):
+		message = 'The "TITLE" field requires input.'
+		nps.notify_confirm(message, title='Title Required', editw=1)
+		
+####################################
+# Edit Setting Form
+####################################
+
+class EditSetting(nps.ActionFormV2):
+	def beforeEditing(self):
+		data = self.parentApp.dbhandler.get_setting()
+		for i, field in enumerate(self.fields):
+			field.value = data[i]
+		
+	def create(self):
+		self.name = 'GENESYS DATABASE - EDIT SETTING'
+
+		self.fields = [
+			self.add(nps.TitleText, name='TITLE'),
+			self.add(nps.TitleText, name='AUTHOR'),
+			self.add(nps.TitleText, name='MAIN GENRE(S)'),
+			self.add(InputBox, name='OVERVIEW')
+		]
+
+	def on_ok(self):
+		if self.fields[0].value == '':
+			self.empty_title()
+		else:
+			data={}
+			for field in self.fields:
+				data[field.name.lower()] = field.value
+			self.parentApp.dbhandler.update_setting(data)
+			self.clear_items()
+			self.parentApp.switchForm('SETTINGMENU')
+
+	def on_cancel(self):
+		self.clear_items()
+		self.parentApp.switchFormPrevious()
+		
+	def clear_items(self):
+		for field in self.fields:
+			field.value = ''
 	
 	def empty_title(self):
 		message = 'The "TITLE" field requires input.'
